@@ -12,25 +12,18 @@ type Commands struct {
 	list []string
 }
 
-func GetList() *Commands {
-	return &Commands{list: []string{
-		"/start",
-		"/инфо",
-		"/участники",
-		"/мои_активности",
-	}}
-}
-
-func ContainsCommand(c *Commands, s string) (string, bool) {
-	for _, v := range c.list {
-		if s == v {
-			return v, true
-		}
-	}
-	return "", false
-}
-
 func ErrorMsg(update *tgbotapi.Update, bot *tgbotapi.BotAPI, text string) {
+	text = "! " + text + " !"
+	res := tgbotapi.NewMessage(update.Message.Chat.ID, text)
+	res.ReplyToMessageID = update.Message.MessageID
+
+	if _, err := bot.Send(res); err != nil {
+		panic(err)
+	}
+}
+
+func Msg(update *tgbotapi.Update, bot *tgbotapi.BotAPI, text string) {
+	text = "! " + text + " !"
 	res := tgbotapi.NewMessage(update.Message.Chat.ID, text)
 	res.ReplyToMessageID = update.Message.MessageID
 
@@ -40,7 +33,7 @@ func ErrorMsg(update *tgbotapi.Update, bot *tgbotapi.BotAPI, text string) {
 }
 
 func Check(update *tgbotapi.Update, db *sql.DB) *entity.User {
-	user, ok := query.FindByUsername(update, db)
+	user, ok := query.FindByUsername(update.Message.From.UserName, db)
 	if !ok {
 		fmt.Println("Юзер не найден")
 		fmt.Println("Добавляем юзера в бд...")
@@ -54,9 +47,9 @@ func Check(update *tgbotapi.Update, db *sql.DB) *entity.User {
 func Start(update *tgbotapi.Update, bot *tgbotapi.BotAPI, user *entity.User) {
 	text := "Добро пожаловать, " + user.Username + "\nВ наше сообщество 'Bored Student Club'\n" +
 		"Список доступных команд: \n" +
-		"/check \n" +
-		"/info \n" +
-		"/test"
+		"инфо \n" +
+		"мои активности \n" +
+		"/send"
 	res := tgbotapi.NewMessage(update.Message.Chat.ID, text)
 	res.ReplyToMessageID = update.Message.MessageID
 
