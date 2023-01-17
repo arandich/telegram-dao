@@ -23,7 +23,6 @@ func ErrorMsg(update *tgbotapi.Update, bot *tgbotapi.BotAPI, text string) {
 }
 
 func Msg(update *tgbotapi.Update, bot *tgbotapi.BotAPI, text string) {
-	text = "! " + text + " !"
 	res := tgbotapi.NewMessage(update.Message.Chat.ID, text)
 	res.ReplyToMessageID = update.Message.MessageID
 
@@ -64,25 +63,6 @@ func Info(update *tgbotapi.Update, bot *tgbotapi.BotAPI, user *entity.User) {
 		`Карма: ` + user.KarmaToString() + "\n" +
 		"Токены: " + user.TokenToString() + "\n" +
 		"Роль: " + entity.Roles.ListRoles[user.RoleId]
-	res := tgbotapi.NewMessage(update.Message.Chat.ID, text)
-	res.ReplyToMessageID = update.Message.MessageID
-
-	if _, err := bot.Send(res); err != nil {
-		panic(err)
-	}
-}
-
-func UserEvents(update *tgbotapi.Update, bot *tgbotapi.BotAPI, user *entity.User, db *sql.DB) {
-	events, ok := query.SelectAllUserEvents(user, db)
-	if !ok {
-		ErrorMsg(update, bot, "У вас нет активностей ;(")
-	}
-
-	text := "Список твоих активностей: \n"
-	for eventName, val := range events.List {
-		text += "\n" + eventName + " - Статус: " + val.Status
-	}
-
 	res := tgbotapi.NewMessage(update.Message.Chat.ID, text)
 	res.ReplyToMessageID = update.Message.MessageID
 

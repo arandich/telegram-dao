@@ -87,7 +87,7 @@ func SelectAllUserEvents(user *entity.User, db *sql.DB) (*entity.EventsJournal, 
 }
 
 func SelectAllUsersEvents(db *sql.DB) (*entity.EventsJournal, bool) {
-	rows, err := db.Query(`SELECT events_journal.id,event.name,users.username, event.date,events_journal.status FROM events_journal,event,users WHERE users.id = events_journal.user_id AND event.id = events_journal.event_id AND events_journal.status = 'Ожидание';`)
+	rows, err := db.Query(`SELECT events_journal.id,event.name,users.username, event.date,events_journal.status,event.reward FROM events_journal,event,users WHERE users.id = events_journal.user_id AND event.id = events_journal.event_id AND events_journal.status = 'Ожидание';`)
 	if err != nil {
 		log.Println(err)
 		return nil, false
@@ -99,7 +99,7 @@ func SelectAllUsersEvents(db *sql.DB) (*entity.EventsJournal, bool) {
 
 	for rows.Next() {
 		event := entity.UserEvent{}
-		err := rows.Scan(&event.Id, &event.Name, &event.UserName, &event.Date, &event.Status)
+		err := rows.Scan(&event.Id, &event.Name, &event.UserName, &event.Date, &event.Status, &event.Reward)
 		if err != nil {
 			log.Println(err)
 			continue
@@ -108,6 +108,34 @@ func SelectAllUsersEvents(db *sql.DB) (*entity.EventsJournal, bool) {
 		events.List[event.Name] = event
 	}
 
+	if len(events.List) == 0 {
+		return nil, false
+	}
+
+	return &events, true
+}
+
+func SelectAllEvents(db *sql.DB, user *entity.User) (*entity.EventList, bool) {
+	rows, err := db.Query(`SELECT event.id, event.name, event.date,event.reward FROM event WHERE NOT EXISTS(SELECT id FROM events_journal WHERE events_journal.user_id = $1 AND events_journal.event_id = event.id)`, user.Id)
+	if err != nil {
+		log.Println(err)
+		return nil, false
+	}
+
+	defer rows.Close()
+
+	events := entity.EventList{List: map[string]entity.Event{}}
+
+	for rows.Next() {
+		event := entity.Event{}
+		err := rows.Scan(&event.Id, &event.Name, &event.Date, &event.Reward)
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+
+		events.List[event.Name] = event
+	}
 	if len(events.List) == 0 {
 		return nil, false
 	}

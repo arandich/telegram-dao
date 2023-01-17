@@ -17,7 +17,8 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE TABLE IF NOT EXISTS event (
      id SERIAL PRIMARY KEY,
      name VARCHAR(100) NOT NULL,
-     date DATE NOT NULL
+     date DATE NOT NULL,
+     reward int
 );
 
 CREATE TABLE IF NOT EXISTS events_journal (
