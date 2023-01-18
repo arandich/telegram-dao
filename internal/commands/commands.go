@@ -6,6 +6,8 @@ import (
 	"github.com/arandich/telegram-dao/internal/database/entity"
 	"github.com/arandich/telegram-dao/internal/database/query"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	"log"
+	"strconv"
 )
 
 type Commands struct {
@@ -34,10 +36,10 @@ func Msg(update *tgbotapi.Update, bot *tgbotapi.BotAPI, text string) {
 func Check(update *tgbotapi.Update, db *sql.DB) *entity.User {
 	user, ok := query.FindByUsername(update.Message.From.UserName, db)
 	if !ok {
-		fmt.Println("Юзер не найден")
-		fmt.Println("Добавляем юзера в бд...")
+		log.Println("Юзер не найден")
+		log.Println("Добавляем юзера в бд...")
 		adduser(update, db)
-		return nil
+		return Check(update, db)
 	}
 
 	return user
@@ -80,6 +82,26 @@ func GetAllUsers(update *tgbotapi.Update, bot *tgbotapi.BotAPI, db *sql.DB) {
 	text := "Список участников: \n"
 	for username, val := range users.List {
 		text += "\n" + username + " - Роль: " + entity.Roles.ListRoles[val.RoleId]
+	}
+
+	res := tgbotapi.NewMessage(update.Message.Chat.ID, text)
+	res.ReplyToMessageID = update.Message.MessageID
+
+	if _, err := bot.Send(res); err != nil {
+		panic(err)
+	}
+
+}
+
+func GetAllTransactions(update *tgbotapi.Update, bot *tgbotapi.BotAPI, db *sql.DB) {
+	trList, ok := query.SelectAllTransactions(db)
+	if !ok {
+		ErrorMsg(update, bot, "Ошибка запроса к журналу транзакицй")
+	}
+
+	text := "Список последних транзакций: \n"
+	for _, val := range trList.List {
+		text += "\n" + strconv.Itoa(val.TrId) + " - От: " + val.Sender + " - Кому: " + val.ToUsername + "\nКоличество токенов: " + strconv.Itoa(val.Amount) + "\nДата: " + val.TimeToString() + "\n"
 	}
 
 	res := tgbotapi.NewMessage(update.Message.Chat.ID, text)

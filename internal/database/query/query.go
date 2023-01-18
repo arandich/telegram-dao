@@ -57,6 +57,33 @@ func SelectAllUsers(db *sql.DB) (*entity.AllUsers, bool) {
 	return &users, true
 }
 
+func SelectAllTransactions(db *sql.DB) (*entity.TransactionList, bool) {
+	rows, err := db.Query(`SELECT * FROM transaction_journal LIMIT 10`)
+	if err != nil {
+		return nil, false
+	}
+
+	defer rows.Close()
+	trList := entity.TransactionList{}
+
+	for rows.Next() {
+		tr := entity.Transaction{}
+		err := rows.Scan(&tr.TrId, &tr.Sender, &tr.ToUsername, &tr.Amount, &tr.Date)
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+
+		trList.List = append(trList.List, tr)
+
+	}
+
+	if len(trList.List) == 0 {
+		return nil, false
+	}
+	return &trList, true
+}
+
 func SelectAllUserEvents(user *entity.User, db *sql.DB) (*entity.EventsJournal, bool) {
 	rows, err := db.Query(`SELECT event.id,event.name,users.username, event.date,events_journal.status FROM events_journal,event,users WHERE users.id = events_journal.user_id AND event.id = events_journal.event_id AND events_journal.user_id = $1;`, user.Id)
 	if err != nil {

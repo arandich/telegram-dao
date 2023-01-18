@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS roles (
 
 CREATE TABLE IF NOT EXISTS users (
     id SERIAL PRIMARY KEY,
-    username VARCHAR(15) UNIQUE NOT NULL,
+    username VARCHAR(32) UNIQUE NOT NULL,
     role_id int,
     FOREIGN KEY (role_id) REFERENCES roles (id),
     karma INT DEFAULT 0 NOT NULL,
@@ -30,11 +30,38 @@ CREATE TABLE IF NOT EXISTS events_journal (
     status VARCHAR(15) DEFAULT 'Ожидание'
     );
 
+CREATE TABLE IF NOT EXISTS Votes (
+                                     id SERIAL PRIMARY KEY,
+                                     name VARCHAR(100) NOT NULL,
+                                     url VARCHAR,
+                                     date_start TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                                     date_end TIMESTAMP NOT NULL,
+                                     text_1 VARCHAR(100) NOT NULL,
+                                     text_2 VARCHAR(100) NOT NULL,
+                                     text_3 VARCHAR(100),
+                                     var_1 int DEFAULT 0,
+                                     var_2 int DEFAULT 0,
+                                     var_3 int DEFAULT 0
+);
+CREATE TABLE IF NOT EXISTS votes_journal (
+      id SERIAL PRIMARY KEY,
+      vote_id int NOT NULL,
+      user_id int NOT NULL,
+      FOREIGN KEY (vote_id) REFERENCES votes (id),
+      FOREIGN KEY (user_id) REFERENCES users (id),
+      choice VARCHAR(100) NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS transaction_journal (
+    transaction_id SERIAL PRIMARY KEY,
+    sender VARCHAR(32) DEFAULT 'Система',
+    to_username VARCHAR(32) NOT NULL,
+    amount int NOT NULL,
+    transaction_date timestamp DEFAULT CURRENT_TIMESTAMP
+);
 
 
 
-INSERT INTO public.roles (id, name) VALUES (DEFAULT, 'Участник');
-INSERT INTO public.roles (id, name) VALUES (DEFAULT, 'Член клуба');
-INSERT INTO public.roles (id, name) VALUES (DEFAULT, 'Администратор');
-INSERT INTO public.event (id, name, date) VALUES (DEFAULT, 'Тестовая активность3', '2011-01-01');
-INSERT INTO public.events_journal (event_id, user_id, status) VALUES (4,3,DEFAULT);
+INSERT INTO roles (id, name) VALUES (DEFAULT, 'Участник');
+INSERT INTO roles (id, name) VALUES (DEFAULT, 'Член клуба');
+INSERT INTO roles (id, name) VALUES (DEFAULT, 'Администратор');

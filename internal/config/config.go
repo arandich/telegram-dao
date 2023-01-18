@@ -10,7 +10,8 @@ type Config struct {
 	Port     int
 	User     string
 	Password string
-	Dbname   string
+	DB       string
+	Sslmode  string
 }
 
 func GetConfig() *Config {
@@ -19,7 +20,8 @@ func GetConfig() *Config {
 		Port:     getEnvAsInt("POSTGRES_PORT", 5432),
 		User:     os.Getenv("POSTGRES_USER"),
 		Password: os.Getenv("POSTGRES_PASSWORD"),
-		Dbname:   os.Getenv("POSTGRES_DB"),
+		DB:       os.Getenv("POSTGRES_DB"),
+		Sslmode:  os.Getenv("SSLMODE"),
 	}
 }
 

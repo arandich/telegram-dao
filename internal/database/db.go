@@ -9,8 +9,13 @@ import (
 )
 
 func ConnectDb(c *config.Config) *sql.DB {
-	psqlconn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable", c.Host, c.Port, c.User, c.Password, c.Dbname)
-	db, err := sql.Open("postgres", psqlconn)
+	url := fmt.Sprintf("postgres://%v:%v@%v:%v/%v?sslmode=disable",
+		c.User,
+		c.Password,
+		c.Host,
+		c.Port,
+		c.DB)
+	db, err := sql.Open("postgres", url)
 	if err != nil {
 		fmt.Println("Ошибка подключения к бд")
 		log.Panic(err)

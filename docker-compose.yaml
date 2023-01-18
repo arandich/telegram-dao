@@ -1,0 +1,50 @@
+version: '3.5'
+
+services:
+
+  db:
+    image: postgres
+    restart: always
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_PASSWORD=admin
+      - POSTGRES_USER=postgres
+      - POSTGRES_DB=daodb
+  bot:
+    build: ./
+    restart: always
+    container_name: telegram-dao
+    ports:
+      - '8080:8080'
+    environment:
+      TOKEN: 
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: admin
+      POSTGRES_DB: daodb
+      POSTGRES_HOST: db
+      POSTGRES_PORT: 5432
+      SSLMODE: disable
+  migrate:
+    image: migrate/migrate
+    ports:
+      - "8001:2000"
+    depends_on:
+      - db
+
+    volumes:
+      - ./db/migrations/:/database
+
+    command:
+      [ "-path", "/database", "-database",  "postgres://postgres:admin@db:5432/daodb?sslmode=disable", "up" ]
+  pgadmin4:
+    image: dpage/pgadmin4
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@gmail.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "8889:80"
+volumes:
+    pgdata:

@@ -6,6 +6,7 @@ import (
 	"github.com/arandich/telegram-dao/internal/database/entity"
 	"github.com/arandich/telegram-dao/internal/database/query"
 	"github.com/arandich/telegram-dao/internal/database/query/events_query"
+	"github.com/arandich/telegram-dao/pkg/response/callback"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"log"
 	"strconv"
@@ -42,6 +43,7 @@ func UserEvents(update *tgbotapi.Update, bot *tgbotapi.BotAPI, user *entity.User
 	events, ok := query.SelectAllUserEvents(user, db)
 	if !ok {
 		commands.ErrorMsg(update, bot, "У вас нет активностей ;(")
+		return
 	}
 
 	text := "Список твоих активностей: \n"
@@ -136,18 +138,8 @@ func JoinEvent(update *tgbotapi.Update, bot *tgbotapi.BotAPI, db *sql.DB, eventI
 	if !ok {
 		commands.ErrorMsg(update, bot, "Возникла ошибка при отправки заявки - "+eventId)
 	}
-	callback := tgbotapi.NewCallback(update.CallbackQuery.ID, "Успешно!")
-	if _, err := bot.Request(callback); err != nil {
-		panic(err)
-	}
-	msg := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, "Заявка отправлена!")
-	if _, err := bot.Send(msg); err != nil {
-		panic(err)
-	}
-	_, err = bot.Send(tgbotapi.NewDeleteMessage(update.CallbackQuery.Message.Chat.ID, update.CallbackQuery.Message.MessageID))
-	if err != nil {
-		return
-	}
+	callback.CallBackReq(update, bot, "Успешно")
+	callback.CallBackMsg(update, bot, "Заявка отправлена!")
 }
 
 func AcceptEvent(update *tgbotapi.Update, bot *tgbotapi.BotAPI, db *sql.DB, eventId string, reward string) {
@@ -164,19 +156,10 @@ func AcceptEvent(update *tgbotapi.Update, bot *tgbotapi.BotAPI, db *sql.DB, even
 	ok := events_query.Accept(id, karma, db, update.CallbackQuery.From.UserName)
 	if !ok {
 		commands.ErrorMsg(update, bot, "Возникла ошибка при подтверждении заявки - "+eventId)
-	}
-	callback := tgbotapi.NewCallback(update.CallbackQuery.ID, "Успешно!")
-	if _, err := bot.Request(callback); err != nil {
-		panic(err)
-	}
-	msg := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, "Заявка: "+eventId+"\n Подтверждена!")
-	if _, err := bot.Send(msg); err != nil {
-		panic(err)
-	}
-	_, err = bot.Send(tgbotapi.NewDeleteMessage(update.CallbackQuery.Message.Chat.ID, update.CallbackQuery.Message.MessageID))
-	if err != nil {
 		return
 	}
+	callback.CallBackReq(update, bot, "Успешно!")
+	callback.CallBackMsg(update, bot, "Заявка: "+eventId+"\n Подтверждена!")
 }
 
 func DenyEvent(update *tgbotapi.Update, bot *tgbotapi.BotAPI, db *sql.DB, data string) {
@@ -187,18 +170,9 @@ func DenyEvent(update *tgbotapi.Update, bot *tgbotapi.BotAPI, db *sql.DB, data s
 	}
 	ok := events_query.Deny(id, db)
 	if !ok {
-		commands.ErrorMsg(update, bot, "Возникла ошибка при отклонении заявки - "+data)
-	}
-	callback := tgbotapi.NewCallback(update.CallbackQuery.ID, "Успешно!")
-	if _, err := bot.Request(callback); err != nil {
-		panic(err)
-	}
-	msg := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, "Заявка: "+data+"\n Отклонена!")
-	if _, err := bot.Send(msg); err != nil {
-		panic(err)
-	}
-	_, err = bot.Send(tgbotapi.NewDeleteMessage(update.CallbackQuery.Message.Chat.ID, update.CallbackQuery.Message.MessageID))
-	if err != nil {
+		callback.CallBackReq(update, bot, "Ошибка")
 		return
 	}
+	callback.CallBackReq(update, bot, "Успешно")
+	callback.CallBackMsg(update, bot, "Заявка: "+data+"\n Отклонена!")
 }

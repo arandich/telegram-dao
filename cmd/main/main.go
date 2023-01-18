@@ -4,8 +4,12 @@ import (
 	"github.com/arandich/telegram-dao/internal/commands"
 	"github.com/arandich/telegram-dao/internal/commands/events_commands"
 	"github.com/arandich/telegram-dao/internal/commands/tokens"
+	"github.com/arandich/telegram-dao/internal/commands/votes_commands"
 	"github.com/arandich/telegram-dao/internal/config"
 	"github.com/arandich/telegram-dao/internal/database"
+	"github.com/arandich/telegram-dao/internal/database/entity"
+	"github.com/arandich/telegram-dao/pkg/convert"
+	"github.com/arandich/telegram-dao/pkg/response/callback"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/joho/godotenv"
 	"log"
@@ -26,6 +30,9 @@ func main() {
 	newConfig := config.GetConfig()
 
 	db := database.ConnectDb(newConfig)
+	db.SetMaxOpenConns(10)
+	db.SetMaxOpenConns(10)
+	defer db.Close()
 
 	bot, err := tgbotapi.NewBotAPI(token)
 	if err != nil {
@@ -41,20 +48,56 @@ func main() {
 	log.Println("Получение апдейтов")
 	for update := range updates {
 		log.Println("Update найден")
-		log.Println(update)
 		if update.CallbackQuery != nil {
-			log.Println("ЭТО КОЛЛБЕК")
+			log.Println("КОЛЛБЕК")
 			s := strings.Split(update.CallbackQuery.Data, " ")
 			var command string
 
-			if len(s) == 3 {
+			if len(s) == 3 || len(s) == 5 {
 				command = s[0]
 			} else {
-				commands.ErrorMsg(&update, bot, "Неверные аргументы команды")
-				continue
+				callback.CallBackReq(&update, bot, "Ошибка")
+				callback.CallBackMsg(&update, bot, "Неверные аргументы команды")
 			}
 
 			switch command {
+			case "Вариант1":
+				userVote := entity.UserVote{
+					VoteId: convert.ToInt(s[1]),
+					UserId: convert.ToInt(s[2]),
+					Amount: convert.ToInt(s[3]),
+					Choice: s[4],
+				}
+
+				ok := votes_commands.Yes(&update, bot, db, &userVote)
+				if !ok {
+					callback.CallBackReq(&update, bot, "Ошибка")
+					callback.CallBackMsg(&update, bot, "Ошибка голосования!")
+				}
+			case "Вариант2":
+				userVote := entity.UserVote{
+					VoteId: convert.ToInt(s[1]),
+					UserId: convert.ToInt(s[2]),
+					Amount: convert.ToInt(s[3]),
+					Choice: s[4],
+				}
+				ok := votes_commands.No(&update, bot, db, &userVote)
+				if !ok {
+					callback.CallBackReq(&update, bot, "Ошибка")
+					callback.CallBackMsg(&update, bot, "Ошибка голосования!")
+				}
+			case "Вариант3":
+				userVote := entity.UserVote{
+					VoteId: convert.ToInt(s[1]),
+					UserId: convert.ToInt(s[2]),
+					Amount: convert.ToInt(s[3]),
+					Choice: s[4],
+				}
+				ok := votes_commands.Neutral(&update, bot, db, &userVote)
+				if !ok {
+					callback.CallBackReq(&update, bot, "Ошибка")
+					callback.CallBackMsg(&update, bot, "Ошибка голосования!")
+				}
 			case "Участвовать":
 				eventId, userId := s[1], s[2]
 				events_commands.JoinEvent(&update, bot, db, eventId, userId)
@@ -66,7 +109,7 @@ func main() {
 				events_commands.DenyEvent(&update, bot, db, eventId)
 			}
 		} else if update.Message.IsCommand() {
-			log.Println("ЭТО КОМАНДА")
+			log.Println("КОМАНДА")
 			user := commands.Check(&update, db)
 			switch update.Message.Command() {
 			case "send":
@@ -83,17 +126,33 @@ func main() {
 				} else {
 					commands.ErrorMsg(&update, bot, "Тебе не по силам вызвать эту команду")
 				}
+			case "transactions":
+				if user.RoleId >= 3 {
+					commands.GetAllTransactions(&update, bot, db)
+				} else {
+					commands.ErrorMsg(&update, bot, "Тебе не по силам вызвать эту команду")
+				}
+			case "createVoting":
+				if user.RoleId >= 3 {
+					votes_commands.CreateVote(&update, bot, db)
+				} else {
+					commands.ErrorMsg(&update, bot, "Тебе не по силам вызвать эту команду")
+				}
 			case "start":
 				commands.Start(&update, bot, user)
 			default:
 				commands.ErrorMsg(&update, bot, "Команда отсутствует ;(")
 			}
 		} else {
-			log.Println("ЭТО СООБЩЕНИЕ")
+			log.Println("СООБЩЕНИЕ")
 			user := commands.Check(&update, db)
 			switch update.Message.Text {
 			case "инфо":
 				commands.Info(&update, bot, user)
+			case "голосования":
+				votes_commands.AllVotes(&update, bot, db, user)
+			case "мои голосования":
+				votes_commands.UserVotes(&update, bot, user, db)
 			case "активности":
 				events_commands.EventsListUser(&update, bot, db, user)
 			case "участники":
