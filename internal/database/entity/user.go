@@ -12,6 +12,7 @@ type User struct {
 	Karma     int
 	Tokens    int
 	CreatedAt time.Time
+	TonWallet string
 }
 
 func (u *User) KarmaToString() string {

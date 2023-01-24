@@ -2,7 +2,6 @@ package commands
 
 import (
 	"database/sql"
-	"fmt"
 	"github.com/arandich/telegram-dao/internal/database/entity"
 	"github.com/arandich/telegram-dao/internal/database/query"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -33,28 +32,53 @@ func Msg(update *tgbotapi.Update, bot *tgbotapi.BotAPI, text string) {
 	}
 }
 
+func MsgWithoutReply(update *tgbotapi.Update, bot *tgbotapi.BotAPI, text string) {
+	res := tgbotapi.NewMessage(update.Message.Chat.ID, text)
+
+	if _, err := bot.Send(res); err != nil {
+		panic(err)
+	}
+}
+
 func Check(update *tgbotapi.Update, db *sql.DB) *entity.User {
 	user, ok := query.FindByUsername(update.Message.From.UserName, db)
 	if !ok {
 		log.Println("Юзер не найден")
 		log.Println("Добавляем юзера в бд...")
-		adduser(update, db)
+		ok = adduser(update, db)
+		if !ok {
+			log.Println("Ошибка добавления")
+			return nil
+		}
 		return Check(update, db)
 	}
 
 	return user
 }
 
-func Start(update *tgbotapi.Update, bot *tgbotapi.BotAPI, user *entity.User) {
-	text := "Добро пожаловать, " + user.Username + "\nВ наше сообщество 'Bored Student Club'\n" +
-		"Список доступных команд: \n" +
-		"инфо \n" +
-		"мои активности \n" +
-		"/send"
-	res := tgbotapi.NewMessage(update.Message.Chat.ID, text)
-	res.ReplyToMessageID = update.Message.MessageID
+func Start(update *tgbotapi.Update, bot *tgbotapi.BotAPI) {
+	photo := tgbotapi.NewInputMediaPhoto(tgbotapi.FilePath("storage/images/logo.jpg"))
+	mediaGroup := tgbotapi.NewMediaGroup(update.Message.Chat.ID, []interface{}{photo})
+	var numericKeyboard = tgbotapi.NewReplyKeyboard(
+		tgbotapi.NewKeyboardButtonRow(
+			tgbotapi.NewKeyboardButton("Инфо"),
+			tgbotapi.NewKeyboardButton("Кошелек"),
+			tgbotapi.NewKeyboardButton("Активности"),
+		),
+		tgbotapi.NewKeyboardButtonRow(
+			tgbotapi.NewKeyboardButton("Голосования"),
+			tgbotapi.NewKeyboardButton("Мои голосования"),
+			tgbotapi.NewKeyboardButton("Мои активности"),
+		),
+	)
+	res := tgbotapi.NewMessage(update.Message.Chat.ID, "Добро пожаловать! \nСписок доступных команд:")
+	res.ReplyMarkup = numericKeyboard
+	_, err := bot.SendMediaGroup(mediaGroup)
+	if err != nil {
+		panic(err)
+	}
 
-	if _, err := bot.Send(res); err != nil {
+	if _, err = bot.Send(res); err != nil {
 		panic(err)
 	}
 }
@@ -67,7 +91,6 @@ func Info(update *tgbotapi.Update, bot *tgbotapi.BotAPI, user *entity.User) {
 		"Роль: " + entity.Roles.ListRoles[user.RoleId]
 	res := tgbotapi.NewMessage(update.Message.Chat.ID, text)
 	res.ReplyToMessageID = update.Message.MessageID
-
 	if _, err := bot.Send(res); err != nil {
 		panic(err)
 	}
@@ -106,17 +129,17 @@ func GetAllTransactions(update *tgbotapi.Update, bot *tgbotapi.BotAPI, db *sql.D
 
 	res := tgbotapi.NewMessage(update.Message.Chat.ID, text)
 	res.ReplyToMessageID = update.Message.MessageID
-
 	if _, err := bot.Send(res); err != nil {
 		panic(err)
 	}
 
 }
 
-func adduser(update *tgbotapi.Update, db *sql.DB) {
+func adduser(update *tgbotapi.Update, db *sql.DB) bool {
 	ok := query.AddUser(update, db)
 	if !ok {
-		fmt.Println("Ошибка добавления юзера")
-		return
+		log.Println("Ошибка добавления юзера")
+		return false
 	}
+	return true
 }

@@ -17,7 +17,7 @@ func FindByUsername(username string, db *sql.DB) (*entity.User, bool) {
 	user := entity.User{}
 
 	for rows.Next() {
-		err := rows.Scan(&user.Id, &user.Username, &user.RoleId, &user.Karma, &user.Tokens, &user.CreatedAt)
+		err := rows.Scan(&user.Id, &user.Username, &user.RoleId, &user.Karma, &user.Tokens, &user.CreatedAt, &user.TonWallet)
 		if err != nil {
 			log.Println(err)
 			continue

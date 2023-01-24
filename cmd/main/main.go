@@ -5,6 +5,7 @@ import (
 	"github.com/arandich/telegram-dao/internal/commands/events_commands"
 	"github.com/arandich/telegram-dao/internal/commands/tokens"
 	"github.com/arandich/telegram-dao/internal/commands/votes_commands"
+	"github.com/arandich/telegram-dao/internal/commands/wallet"
 	"github.com/arandich/telegram-dao/internal/config"
 	"github.com/arandich/telegram-dao/internal/database"
 	"github.com/arandich/telegram-dao/internal/database/entity"
@@ -52,7 +53,6 @@ func main() {
 			log.Println("КОЛЛБЕК")
 			s := strings.Split(update.CallbackQuery.Data, " ")
 			var command string
-
 			if len(s) == 3 || len(s) == 5 {
 				command = s[0]
 			} else {
@@ -111,6 +111,10 @@ func main() {
 		} else if update.Message.IsCommand() {
 			log.Println("КОМАНДА")
 			user := commands.Check(&update, db)
+			if user == nil {
+				commands.Msg(&update, bot, "Ошибка")
+				return
+			}
 			switch update.Message.Command() {
 			case "send":
 				tokens.SendTokensTo(&update, bot, db, user)
@@ -138,15 +142,18 @@ func main() {
 				} else {
 					commands.ErrorMsg(&update, bot, "Тебе не по силам вызвать эту команду")
 				}
+			case "wallet":
+
+				wallet.AddWallet(&update, bot, db, user)
 			case "start":
-				commands.Start(&update, bot, user)
+				commands.Start(&update, bot)
 			default:
 				commands.ErrorMsg(&update, bot, "Команда отсутствует ;(")
 			}
 		} else {
 			log.Println("СООБЩЕНИЕ")
 			user := commands.Check(&update, db)
-			switch update.Message.Text {
+			switch strings.ToLower(update.Message.Text) {
 			case "инфо":
 				commands.Info(&update, bot, user)
 			case "голосования":
@@ -155,6 +162,12 @@ func main() {
 				votes_commands.UserVotes(&update, bot, user, db)
 			case "активности":
 				events_commands.EventsListUser(&update, bot, db, user)
+			case "кошелек":
+				if user.TonWallet == "" {
+					commands.Msg(&update, bot, "У вас еще нет кошелька, чтобы добавить кошелек введите\n /wallet *ваш кошелек*")
+				} else {
+					commands.Msg(&update, bot, user.TonWallet)
+				}
 			case "участники":
 				if user.RoleId >= 2 {
 					commands.GetAllUsers(&update, bot, db)

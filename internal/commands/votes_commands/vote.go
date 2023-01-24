@@ -81,9 +81,17 @@ func AllVotes(update *tgbotapi.Update, bot *tgbotapi.BotAPI, db *sql.DB, user *e
 				votes_data = append(votes_data, v)
 
 			} else {
-				votes_data = append(votes_data[:i], votes_data[i+1:]...)
+				if len(votes_data) == 1 {
+					votes_data[0] = entity.Vote{}
+				} else {
+					votes_data = append(votes_data[:i], votes_data[i+1:]...)
+				}
 			}
 		}
+	}
+	if votes_data[0].Name == "" {
+		commands.Msg(update, bot, "Сейчас нет активных голосований")
+		return
 	}
 	for _, v := range votes_data {
 		text := "*" + v.Name + "* \n" +
@@ -209,10 +217,9 @@ func UserVotes(update *tgbotapi.Update, bot *tgbotapi.BotAPI, user *entity.User,
 
 		}
 	}
-	log.Println(len(votes_data))
 	for _, val := range votes_data {
 		text := val.Name + "\n" + "Дата начала: " + val.DateStart.Format("2006-01-02") + "\n" + "Дата окончания: " + val.DateEnd.Format("2006-01-02") + "\n" + "Ссылка: " + val.Url + "\nВы выбрали: " + val.Choice
-		commands.Msg(update, bot, text)
+		commands.MsgWithoutReply(update, bot, text)
 	}
 }
 

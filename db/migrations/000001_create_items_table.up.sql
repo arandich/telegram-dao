@@ -8,8 +8,9 @@ CREATE TABLE IF NOT EXISTS users (
     id SERIAL PRIMARY KEY,
     username VARCHAR(32) UNIQUE NOT NULL,
     role_id int,
+    ton_wallet VARCHAR(64),
     FOREIGN KEY (role_id) REFERENCES roles (id),
-    karma INT DEFAULT 0 NOT NULL,
+    karma INT DEFAULT 1 NOT NULL,
     tokens INT DEFAULT 0 NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
